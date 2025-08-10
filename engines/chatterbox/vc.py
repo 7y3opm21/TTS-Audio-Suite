@@ -30,7 +30,11 @@ class ChatterboxVC:
         self.sr = S3GEN_SR
         self.s3gen = s3gen
         self.device = device
-        
+        #reinserted watermark code / Initialize watermarker silently (but disabled by default)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            self.watermarker = perth.PerthImplicitWatermarker()
+            self.enable_watermarking = False  # Disabled by default for maximum compatibility
         if ref_dict is None:
             self.ref_dict = None
         else:
@@ -129,6 +133,11 @@ class ChatterboxVC:
                 speech_tokens=s3_tokens,
                 ref_dict=self.ref_dict,
             )
-       wav = wav.squeeze(0).detach().cpu().numpy()
-return torch.from_numpy(wav).unsqueeze(0)  # Clean, simple, no watermarking
+      wav = wav.squeeze(0).detach().cpu().numpy()
+            if self.enable_watermarking:
+                watermarked_wav = self.watermarker.apply_watermark(wav, sample_rate=self.sr)
+                return torch.from_numpy(watermarked_wav).unsqueeze(0)
+            else:
+                return torch.from_numpy(wav).unsqueeze(0)
+
 
